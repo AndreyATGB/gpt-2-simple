@@ -116,11 +116,13 @@ def finetune(sess,
              accumulate_gradients=5,
              restore_from='latest',
              run_name='run1',
+             sample_en=False,
              sample_every=100,
              sample_length=1023,
              sample_num=1,
              save_every=1000,
              print_every=1,
+             target_loss=1.50,
              max_checkpoints=1,
              use_memory_saving_gradients=False,
              only_train_transformer_layers=False,
@@ -181,29 +183,29 @@ def finetune(sess,
         temperature=1.0,
         top_k=40)
 
-    all_vars = [v for v in tf.trainable_variables() if 'model' in v.name]
+    all_vars = [v for v in tf.compat.v1.trainable_variables() if 'model' in v.name]
     train_vars = [v for v in all_vars if '/h' in v.name] if only_train_transformer_layers else all_vars
     if accumulate_gradients > 1:
         if use_memory_saving_gradients:
             exit("Memory saving gradients are not implemented for gradient accumulation yet.")
         opt = AccumulatingOptimizer(
-            opt=tf.train.AdamOptimizer(learning_rate=learning_rate),
+            opt=tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate),
             var_list=train_vars)
         opt_reset = opt.reset()
         opt_compute = opt.compute_gradients(loss)
         opt_apply = opt.apply_gradients()
-        summary_loss = tf.summary.scalar('loss', opt_apply)
+        summary_loss = tf.compat.v1.summary.scalar('loss', opt_apply)
     else:
-        opt = tf.train.AdamOptimizer(learning_rate=learning_rate)
+        opt = tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate)
         if use_memory_saving_gradients:
             opt_grads = memory_saving_gradients.gradients(loss, train_vars)
         else:
             opt_grads = tf.gradients(loss, train_vars)
         opt_grads = list(zip(opt_grads, train_vars))
         opt_apply = opt.apply_gradients(opt_grads)
-        summary_loss = tf.summary.scalar('loss', loss)
+        summary_loss = tf.compat.v1.summary.scalar('loss', loss)
 
-    summary_log = tf.summary.FileWriter(checkpoint_path)
+    summary_log = tf.compat.v1.summary.FileWriter(checkpoint_path)
 
     saver = tf.compat.v1.train.Saver(
         var_list=all_vars,
@@ -239,7 +241,7 @@ def finetune(sess,
             counter = int(fp.read()) + 1
     counter_base = counter
 
-    def save():
+    def save(info_dict=None):
         maketree(checkpoint_path)
         print(
             'Saving',
@@ -251,6 +253,9 @@ def finetune(sess,
             global_step=counter-1)
         with open(counter_path, 'w') as fp:
             fp.write(str(counter-1) + '\n')
+        if info_dict:
+            with open(os.path.join(checkpoint_path, 'info.json'), 'w') as fw:
+                json.dump(info_dict, fw, indent=1)
 
     def generate_samples():
         context_tokens = data_sampler.sample(1)
@@ -283,19 +288,24 @@ def finetune(sess,
         save()
 
     avg_loss = (0.0, 0.0)
+    info_dict = None
     start_time = time.time()
 
     if steps:
         steps = int(steps)
-    
+
     try:
         while True:
             if steps > 0 and counter == (counter_base + steps):
-                save()
+                save(info_dict)
+                return
+            elif info_dict is not None and (info_dict['avg'] <= target_loss):
+                save(info_dict)
+                print(f'Loss requirement met, stopping at step {counter}.')
                 return
             if (counter - 1) % save_every == 0 and counter > 1:
-                save()
-            if (counter - 1) % sample_every == 0 and counter > 1:
+                save(info_dict)
+            if (counter - 1) % sample_every == 0 and counter > 1 and sample_en:
                 generate_samples()
 
             if accumulate_gradients > 1:
@@ -310,23 +320,25 @@ def finetune(sess,
                     feed_dict={context: sample_batch()})
 
             summary_log.add_summary(v_summary, counter)
+            avg_loss = (avg_loss[0] * 0.99 + v_loss,
+                        avg_loss[1] * 0.99 + 1.0)
 
             if counter % print_every == 0:
-                avg_loss = (avg_loss[0] * 0.99 + v_loss,
-                            avg_loss[1] * 0.99 + 1.0)
-
+                info_dict = {
+                    'counter': counter,
+                    'time': time.time() - start_time,
+                    'loss': float(v_loss),
+                    'avg': float(avg_loss[0] / avg_loss[1])
+                }
                 print(
                     '[{counter} | {time:2.2f}] loss={loss:2.2f} avg={avg:2.2f}'
-                    .format(
-                        counter=counter,
-                        time=time.time() - start_time,
-                        loss=v_loss,
-                        avg=avg_loss[0] / avg_loss[1]))
+                    .format(**info_dict)
+                )
 
             counter += 1
     except KeyboardInterrupt:
         print('interrupted')
-        save()
+        save(info_dict)
 
 
 def load_gpt2(sess,

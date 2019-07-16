@@ -10,6 +10,14 @@ with warnings.catch_warnings():
     warnings.filterwarnings("ignore",category=FutureWarning)
     import tensorflow as tf
 
+"""
+From src/sample.py:17: add_dispatch_support.<locals>.wrapper (from tensorflow.python.ops.array_ops) is deprecated and will be removed in a future version.
+Instructions for updating:
+Use tf.where in 2.0, which has the same broadcast rule as np.where
+src/accumulate.py:14: Variable.initialized_value (from tensorflow.python.ops.variables) is deprecated and will be removed in a future version.
+Instructions for updating:
+Use Variable.read_value. Variables in 2.X are initialized automatically both in eager and graph (inside tf.defun) contexts.
+"""
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Runs gpt-2-simple.')
@@ -32,7 +40,7 @@ def parse_args():
     parser.add_argument('--num_epochs', required=False, type=int,
                         help='Max epochs', default=1000)
     parser.add_argument('--save_epochs', required=False, type=int,
-                        help='How often to save.', default=20)
+                        help='How often to save.', default=100)
     parser.add_argument('--verbose', required=False, type=int,
                         help='Verbosity level, 0 silent, 1 progress bar, 2 epoch only.', default=1)
     # Generation
@@ -63,11 +71,11 @@ if __name__ == '__main__':
     if args['train']:
         gpt2.finetune(sess,
             textpath,
-            model_name=args['model_name'],
+            model_name=args['gpt2_model'],
             run_name=args["tune_model"],
-            sample_every=1000000,
             save_every=args['save_epochs'],
             steps=args['num_epochs'],
+            print_every=10,
             batch_size=args['batch_size'])
     # Generate
     elif args['generate']:
