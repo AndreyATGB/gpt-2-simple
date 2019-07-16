@@ -37,9 +37,11 @@ def parse_args():
                         help='Verbosity level, 0 silent, 1 progress bar, 2 epoch only.', default=1)
     # Generation
     parser.add_argument('-n', '--num_words', required=False, type=int,
-                        help='number of words to generate', default=20)
+                        help='number of words to generate', default=100)
     parser.add_argument('--temp', required=False, type=float,
                         help='Temperature to use when generating.', default=0.5)
+    parser.add_argument('--cpu', required=False, action='store_true',
+                        help='Force CPU only.')
     args = vars(parser.parse_args())
     return args
 
@@ -52,7 +54,12 @@ if __name__ == '__main__':
     if not os.path.exists(textpath) and args['train']:
         print(F"No file {textpath} found.")
         sys.exit(0)
-    sess = gpt2.start_tf_sess(gpu_frac=args['gpu_frac'])
+
+    if args['cpu']:
+        sess = gpt2.start_tf_sess(force_cpu=True)
+    else:
+        sess = gpt2.start_tf_sess(gpu_frac=args['gpu_frac'])
+
     if args['train']:
         gpt2.finetune(sess,
             textpath,
