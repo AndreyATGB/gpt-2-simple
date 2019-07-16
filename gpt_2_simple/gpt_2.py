@@ -85,9 +85,9 @@ def download_gpt2(model_name='117M'):
 
 def start_tf_sess(threads=-1, server=None, gpu_frac=None):
     """
-    Returns a tf.Session w/ config
+    Returns a tf.compat.v1.Session w/ config
     """
-    config = tf.ConfigProto()
+    config = tf.compat.v1.ConfigProto()
     if gpu_frac is None:
         config.gpu_options.allow_growth = True
     else:
@@ -98,9 +98,9 @@ def start_tf_sess(threads=-1, server=None, gpu_frac=None):
         config.inter_op_parallelism_threads = threads
 
     if server is not None:
-        return tf.Session(target=server.target, config=config)
+        return tf.compat.v1.Session(target=server.target, config=config)
     
-    return tf.Session(config=config)
+    return tf.compat.v1.Session(config=config)
 
 
 def finetune(sess,
@@ -164,7 +164,7 @@ def finetune(sess,
         only_train_transformer_layers = True
         accumulate_gradients = 1
 
-    context = tf.placeholder(tf.int32, [batch_size, None])
+    context = tf.compat.v1.placeholder(tf.int32, [batch_size, None])
     output = model.model(hparams=hparams, X=context)
     loss = tf.reduce_mean(
         tf.nn.sparse_softmax_cross_entropy_with_logits(
@@ -202,10 +202,10 @@ def finetune(sess,
 
     summary_log = tf.summary.FileWriter(checkpoint_path)
 
-    saver = tf.train.Saver(
+    saver = tf.compat.v1.train.Saver(
         var_list=all_vars,
         max_to_keep=max_checkpoints)
-    sess.run(tf.global_variables_initializer())
+    sess.run(tf.compat.v1.global_variables_initializer())
 
     if restore_from == 'latest':
         ckpt = tf.train.latest_checkpoint(checkpoint_path)
@@ -340,12 +340,12 @@ def load_gpt2(sess,
     with open(os.path.join(checkpoint_path, 'hparams.json')) as f:
         hparams.override_from_dict(json.load(f))
 
-    context = tf.placeholder(tf.int32, [1, None])
+    context = tf.compat.v1.placeholder(tf.int32, [1, None])
     output = model.model(hparams=hparams, X=context)
 
     ckpt = tf.train.latest_checkpoint(checkpoint_path)
-    saver = tf.train.Saver(allow_empty=True)
-    sess.run(tf.global_variables_initializer())
+    saver = tf.compat.v1.train.Saver(allow_empty=True)
+    sess.run(tf.compat.v1.global_variables_initializer())
 
     print('Loading checkpoint', ckpt)
     saver.restore(sess, ckpt)
@@ -392,11 +392,11 @@ def generate(sess,
         hparams.override_from_dict(json.load(f))
 
     if prefix:
-        context = tf.placeholder(tf.int32, [batch_size, None])
+        context = tf.compat.v1.placeholder(tf.int32, [batch_size, None])
         context_tokens = enc.encode(prefix)
 
     np.random.seed(seed)
-    tf.set_random_seed(seed)
+    tf.compat.v1.set_random_seed(seed)
 
     output = sample.sample_sequence(
         hparams=hparams,
