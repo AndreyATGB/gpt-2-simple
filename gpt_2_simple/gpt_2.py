@@ -241,6 +241,8 @@ def finetune(sess,
             counter = int(fp.read()) + 1
     counter_base = counter
 
+    info_path = os.path.join(checkpoint_path, 'info.json')
+
     def save(info_dict=None):
         maketree(checkpoint_path)
         print(
@@ -254,7 +256,7 @@ def finetune(sess,
         with open(counter_path, 'w') as fp:
             fp.write(str(counter-1) + '\n')
         if info_dict:
-            with open(os.path.join(checkpoint_path, 'info.json'), 'w') as fw:
+            with open(info_path, 'w') as fw:
                 json.dump(info_dict, fw, indent=1)
 
     def generate_samples():
@@ -289,7 +291,11 @@ def finetune(sess,
 
     avg_loss = (0.0, 0.0)
     info_dict = None
+    # Load previous time if it exists
     start_time = time.time()
+    if os.path.exists(info_path):
+        with open(info_path, 'r') as fr:
+            start_time -= json.load(fr)['time']
 
     if steps:
         steps = int(steps)
@@ -299,7 +305,7 @@ def finetune(sess,
             if steps > 0 and counter == (counter_base + steps):
                 save(info_dict)
                 return
-            elif info_dict is not None and (info_dict['avg'] <= target_loss):
+            elif steps <= 0 and info_dict is not None and (info_dict['avg'] <= target_loss):
                 save(info_dict)
                 print(f'Loss requirement met, stopping at step {counter}.')
                 return

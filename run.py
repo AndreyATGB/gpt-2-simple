@@ -36,9 +36,11 @@ def parse_args():
     parser.add_argument('--batch_size', required=False, type=int,
                         help='Specify batch size', default=1)
     parser.add_argument('--gpu_frac', required=False, type=float,
-                        help='Fraction of GPU memory to use.', default=0.8)
+                        help='Fraction of GPU memory to use.', default=None)
     parser.add_argument('--num_epochs', required=False, type=int,
-                        help='Max epochs', default=1000)
+                        help='Max epochs', default=-1)
+    parser.add_argument('--target_loss', required=False, type=float,
+                        help='Max epochs', default=1.5)
     parser.add_argument('--save_epochs', required=False, type=int,
                         help='How often to save.', default=100)
     parser.add_argument('--verbose', required=False, type=int,
@@ -75,6 +77,7 @@ if __name__ == '__main__':
             run_name=args["tune_model"],
             save_every=args['save_epochs'],
             steps=args['num_epochs'],
+            target_loss=args['target_loss'],
             print_every=10,
             batch_size=args['batch_size'])
     # Generate
