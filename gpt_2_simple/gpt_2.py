@@ -83,12 +83,15 @@ def download_gpt2(model_name='117M'):
         download_file_with_progress(url_base="https://storage.googleapis.com/gpt-2", sub_dir=sub_dir, file_name=file_name)
 
 
-def start_tf_sess(threads=-1, server=None):
+def start_tf_sess(threads=-1, server=None, gpu_frac=None):
     """
     Returns a tf.Session w/ config
     """
     config = tf.ConfigProto()
-    config.gpu_options.allow_growth = True
+    if gpu_frac is None:
+        config.gpu_options.allow_growth = True
+    else:
+        config.gpu_options.per_process_gpu_memory_fraction = gpu_frac
     config.graph_options.rewrite_options.layout_optimizer = rewriter_config_pb2.RewriterConfig.OFF
     if threads > 0:
         config.intra_op_parallelism_threads = threads
