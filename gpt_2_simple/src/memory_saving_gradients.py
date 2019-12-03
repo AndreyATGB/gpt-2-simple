@@ -86,7 +86,7 @@ def gradients(ys, xs, grad_ys=None, checkpoints='collection', **kwargs):
     # given as input
     if type(checkpoints) is not list:
         if checkpoints == 'collection':
-            checkpoints = tf.get_collection('checkpoints')
+            checkpoints = tf.compat.v1.get_collection('checkpoints')
 
         elif checkpoints == 'speed':
             # checkpoint all expensive ops to maximize running speed

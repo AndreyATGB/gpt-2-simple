@@ -305,7 +305,8 @@ def finetune(sess,
             if steps > 0 and counter == (counter_base + steps):
                 save(info_dict)
                 return
-            elif steps <= 0 and info_dict is not None and (info_dict['avg'] <= target_loss):
+            # elif steps <= 0 and info_dict is not None and (info_dict['avg'] <= target_loss):
+            elif info_dict is not None and (info_dict['avg'] <= target_loss):
                 save(info_dict)
                 print(f'Loss requirement met, stopping at step {counter}.')
                 return

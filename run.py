@@ -17,6 +17,8 @@ Use tf.where in 2.0, which has the same broadcast rule as np.where
 src/accumulate.py:14: Variable.initialized_value (from tensorflow.python.ops.variables) is deprecated and will be removed in a future version.
 Instructions for updating:
 Use Variable.read_value. Variables in 2.X are initialized automatically both in eager and graph (inside tf.defun) contexts.
+
+python ./run.py -t --num_epochs 10000 --target_loss 0.8 -tm jens_345M -fp ../training_text/jens.txt --save_epochs 100 -gm 345M --gpu_frac 0.75
 """
 
 def parse_args():
@@ -30,7 +32,7 @@ def parse_args():
                         help='generate text')
     # Training
     parser.add_argument('-gm', '--gpt2_model', required=False, type=str,
-                        help='GPT2 base model name', default='117M')
+                        help='GPT2 base model name, 117M or 345M', default='117M')
     parser.add_argument('-fp', '--file_path', required=False, type=str,
                         help='Optional path to text file.', default='./')
     parser.add_argument('--batch_size', required=False, type=int,
@@ -58,7 +60,7 @@ def parse_args():
 
 if __name__ == '__main__':
     # Hide debug info
-    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1' 
+    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
     args = parse_args()
     textpath = args['file_path']
     if not os.path.exists(textpath) and args['train']:
@@ -71,6 +73,8 @@ if __name__ == '__main__':
         sess = gpt2.start_tf_sess(gpu_frac=args['gpu_frac'])
 
     if args['train']:
+        if not os.path.exists(f"models/{args['gpt2_model']}"):
+            gpt2.download_gpt2(args['gpt2_model'])
         gpt2.finetune(sess,
             textpath,
             model_name=args['gpt2_model'],
@@ -78,7 +82,7 @@ if __name__ == '__main__':
             save_every=args['save_epochs'],
             steps=args['num_epochs'],
             target_loss=args['target_loss'],
-            print_every=10,
+            print_every=20,
             batch_size=args['batch_size'])
     # Generate
     elif args['generate']:
