@@ -32,7 +32,7 @@ def parse_args():
                         help='generate text')
     # Training
     parser.add_argument('-gm', '--gpt2_model', required=False, type=str,
-                        help='GPT2 base model name, 117M or 345M', default='117M')
+                        help='GPT2 base model name, 117M, 124M or 345M', default='117M')
     parser.add_argument('-fp', '--file_path', required=False, type=str,
                         help='Optional path to text file.', default='./')
     parser.add_argument('--batch_size', required=False, type=int,
@@ -54,6 +54,8 @@ def parse_args():
                         help='Temperature to use when generating.', default=0.5)
     parser.add_argument('--cpu', required=False, action='store_true',
                         help='Force CPU only.')
+    parser.add_argument('--save', required=False, action='store_true',
+                        help='Save output to text file')
     args = vars(parser.parse_args())
     return args
 
@@ -92,5 +94,9 @@ if __name__ == '__main__':
         start = perf_counter()
         gen = gpt2.generate(sess, run_name=args["tune_model"], temperature=args["temp"],
                             length=args["num_words"], return_as_list=True)
-        print(gen[0])
-        print(f'Generated in {(perf_counter()-start):.2f}s')
+        if args['save']:
+            with open(f'samples/generated_{args["tune_model"]}_{args["gpt2_model"]}.txt', 'w', encoding='utf-8') as fw:
+                fw.write(gen[0])
+        else:
+            print(gen[0])
+        print(f'Generated {len(gen[0])} words in {(perf_counter()-start):.2f}s')
